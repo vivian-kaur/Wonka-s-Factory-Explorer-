@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Charlie & The Chocolate Factory - Mission Adventure</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;700;800&display=swap');
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: linear-gradient(135deg, #2d112c 0%, #52154e 50%, #1b091c 100%);
+      color: #fff;
+      min-height: 100vh;
+    }
+    .font-fredoka { font-family: 'Fredoka', cursive, sans-serif; }
+    .gold-gradient {
+      background: linear-gradient(to right, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+    }
+    .gold-card {
+      background: linear-gradient(145deg, #fff6d6 0%, #ffd97d 100%);
+      border: 3px solid #d4af37;
+    }
+    .purple-card {
+      background: rgba(255, 255, 255, 0.96);
+      color: #333;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+    }
+    .word-grid-cell {
+      user-select: none;
+      transition: all 0.2s ease;
+    }
+    .word-grid-cell.selected {
+      background-color: #fbbf24;
+      color: #1e1b4b;
+      transform: scale(1.1);
+      font-weight: bold;
+    }
+    .word-grid-cell.found {
+      background-color: #34d399;
+      color: #064e3b;
+      font-weight: bold;
+    }
+    .drag-item {
+      cursor: grab;
+      user-select: none;
+      transition: transform 0.15s ease, background-color 0.2s ease;
+    }
+    .drag-item:active {
+      cursor: grabbing;
+      transform: scale(1.02);
+    }
+    .drag-item.dragging {
+      opacity: 0.5;
+      border-color: #9333ea;
+    }
+    .opt-btn {
+      transition: all 0.2s ease;
+    }
+    .opt-btn:hover {
+      transform: translateY(-2px);
+    }
+    .opt-btn.selected-option {
+      border-color: #7c3aed;
+      background-color: #f3e8ff;
+      color: #581c87;
+    }
+    .opt-btn.correct-option {
+      border-color: #16a34a !important;
+      background-color: #dcfce7 !important;
+      color: #14532d !important;
+    }
+    .opt-btn.wrong-option {
+      border-color: #dc2626 !important;
+      background-color: #fee2e2 !important;
+      color: #7f1d1d !important;
+    }
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #2d112c;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #d4af37;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body class="p-2 sm:p-4 md:p-6 flex flex-col justify-between min-h-screen">
+
+  <!-- REGISTRATION MODAL -->
+  <div id="registration-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div class="gold-card max-w-xl w-full rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-purple-950 max-h-[90vh] overflow-y-auto">
+      <div class="text-center space-y-2">
+        <div class="w-16 h-16 mx-auto rounded-full gold-gradient flex items-center justify-center text-3xl shadow-lg border-2 border-amber-800">
+          🎩
+        </div>
+        <h2 class="font-fredoka text-3xl font-bold text-purple-950">Wonka's Factory Explorer!</h2>
+        <p class="text-xs sm:text-sm font-semibold text-purple-900/80">Enter your details and select your character to begin!</p>
+      </div>
+
+      <form id="registration-form" onsubmit="submitRegistration(event)" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-purple-900 uppercase mb-1">Student Name</label>
+            <input type="text" id="reg-name" required placeholder="e.g. Alex" class="w-full p-3 rounded-xl border-2 border-amber-400 bg-white font-bold text-purple-950 outline-none focus:ring-2 focus:ring-purple-600">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-purple-900 uppercase mb-1">Class</label>
+            <input type="text" id="reg-class" required placeholder="e.g. 3A" class="w-full p-3 rounded-xl border-2 border-amber-400 bg-white font-bold text-purple-950 outline-none focus:ring-2 focus:ring-purple-600">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-purple-900 uppercase mb-1">Class No.</label>
+            <input type="number" id="reg-num" min="1" max="50" required placeholder="e.g. 12" class="w-full p-3 rounded-xl border-2 border-amber-400 bg-white font-bold text-purple-950 outline-none focus:ring-2 focus:ring-purple-600">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-purple-900 uppercase mb-2">Choose Your Character Avatar</label>
+          <div class="grid grid-cols-3 sm:grid-cols-6 gap-2" id="character-selector">
+            <!-- Dynamically populated via JS -->
+          </div>
+        </div>
+
+        <button type="submit" class="w-full bg-purple-900 hover:bg-purple-950 text-amber-300 font-fredoka text-xl py-3 rounded-2xl shadow-lg transition transform hover:scale-[1.02] border-2 border-amber-400">
+          Start Mission / Play! 🚀
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOP HEADER & LEADERBOARD BANNER -->
+  <header class="max-w-6xl mx-auto w-full mb-6 space-y-4">
+    <!-- LEADERBOARD TOP 3 BANNER -->
+    <div class="bg-gradient-to-r from-purple-900 via-amber-700 to-purple-900 border-2 border-yellow-400/80 rounded-2xl p-3 shadow-lg flex flex-col md:flex-row items-center justify-between gap-3 text-white">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-trophy text-yellow-300 text-2xl animate-bounce"></i>
+        <div>
+          <span class="font-fredoka text-lg text-yellow-300 tracking-wide block leading-tight">TOP 3 WONKA ADVENTURERS</span>
+          <span class="text-xs text-purple-200">Hall of Fame Champions</span>
+        </div>
+      </div>
+      <div id="top-3-container" class="flex flex-wrap items-center gap-2 sm:gap-4 text-xs font-bold">
+        <!-- Dynamically rendered via JS -->
+      </div>
+    </div>
+
+    <!-- MAIN NAV HEADER -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-purple-950/80 p-4 rounded-2xl border-2 border-yellow-500/40 backdrop-blur-md">
+      <div class="flex items-center gap-3 cursor-pointer" onclick="showDashboard()">
+        <div id="user-avatar-badge" class="w-12 h-12 rounded-full gold-gradient flex items-center justify-center text-amber-950 text-2xl font-bold shadow-lg border-2 border-yellow-400">
+          🎩
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 id="user-display-name" class="font-fredoka text-xl sm:text-2xl font-bold text-amber-300 tracking-wide">Guest Explorer</h1>
+            <span id="user-display-class" class="bg-purple-800 text-amber-200 text-xs px-2.5 py-0.5 rounded-full font-bold border border-amber-400/30">Class --</span>
+          </div>
+          <p class="text-xs text-purple-200">Charlie and the Chocolate Factory • Mission Adventure</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="bg-amber-500/20 px-4 py-2 rounded-xl border border-amber-400/30 flex items-center gap-3">
+          <i class="fas fa-star text-yellow-400 text-xl animate-pulse"></i>
+          <div>
+            <span class="text-xs text-amber-200 block leading-none">Total Stars</span>
+            <span id="total-score-display" class="font-bold text-lg text-yellow-300 leading-none">0 / 41</span>
+          </div>
+        </div>
+        <button onclick="showDashboard()" class="bg-yellow-500 hover:bg-yellow-400 text-amber-950 font-bold px-4 py-2 rounded-xl transition shadow-md flex items-center gap-2 text-sm">
+          <i class="fas fa-th-large"></i> Missions
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-6xl mx-auto w-full flex-grow">
+
+    <!-- DASHBOARD VIEW -->
+    <section id="dashboard-view" class="space-y-6">
+      <div class="text-center space-y-2 mb-6">
+        <h2 class="font-fredoka text-3xl sm:text-4xl text-amber-300 drop-shadow-md">Chocolate Factory Missions 🍫</h2>
+        <p class="text-purple-200 text-sm sm:text-base max-w-xl mx-auto">Complete all 6 missions to win the Willy Wonka Golden Trophy!</p>
+        
+        <div class="max-w-md mx-auto bg-purple-950/80 rounded-full h-4 p-1 border border-amber-400/50 mt-3">
+          <div id="overall-progress-bar" class="gold-gradient h-full rounded-full transition-all duration-500" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Grid of Mission Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- Mission 1 -->
+        <div onclick="openSection(1)" class="gold-card rounded-2xl p-6 cursor-pointer transform hover:-translate-y-2 transition duration-300 relative overflow-hidden group">
+          <div class="flex justify-between items-start mb-3">
+            <span class="bg-purple-900 text-yellow-300 font-bold px-3 py-1 rounded-full text-xs">Mission 1</span>
+            <span id="badge-sec-1" class="bg-amber-800/20 text-amber-900 text-xs font-bold px-2.5 py-1 rounded-full">Not Started</span>
+          </div>
+          <div class="text-4xl mb-3">🎟️</div>
+          <h3 class="font-fredoka text-xl font-bold text-purple-950 mb-2">1. Ticket Badges & Past Verbs</h3>
+          <p class="text-purple-900/80 text-sm mb-4">Assign ticket finder badges (1st to 4th) and type past tense verbs!</p>
+          <div class="flex items-center justify-between pt-2 border-t border-amber-900/10">
+            <span id="score-sec-1" class="text-xs font-bold text-amber-900">Score: 0 / 9</span>
+            <span class="text-purple-950 group-hover:translate-x-1 transition font-bold text-sm">Start <i class="fas fa-arrow-right"></i></span>
+          </div>
+        </div>
+
+        <!-- Mission 2 -->
+        <div onclick="openSection(2)" class="gold-card rounded-2xl p-6 cursor-pointer transform hover:-translate-y-2 transition duration-300 relative overflow-hidden group">
+          <div class="flex justify-between items-start mb-3">
+            <span class="bg-purple-900 text-yellow-300 font-bold px-3 py-1 rounded-full text-xs">Mission 2</span>
+            <span id="badge-sec-2" class="bg-amber-800/20 text-amber-900 text-xs font-bold px-2.5 py-1 rounded-full">Not Started</span>
+          </div>
+          <div class="text-4xl mb-3">🔍</div>
+          <h3 class="font-fredoka text-xl font-bold text-purple-950 mb-2">2. Factory Word Search</h3>
+          <p class="text-purple-900/80 text-sm mb-4">Find all hidden story & factory words in the interactive grid puzzle!</p>
+          <div class="flex items-center justify-between pt-2 border-t border-amber-900/10">
+            <span id="score-sec-2" class="text-xs font-bold text-amber-900">Score: 0 / 6</span>
+            <span class="text-purple-950 group-hover:translate-x-1 transition font-bold text-sm">Start <i class="fas fa-arrow-right"></i></span>
+          </div>
+        </div>
+
+        <!-- Mission 3 -->
+        <div onclick="openSection(3)" class="gold-card rounded-2xl p-6 cursor-pointer transform hover:-translate-y-2 transition duration-300 relative overflow-hidden group">
+          <div class="flex justify-between items-start mb-3">
+            <span class="bg-purple-900 text-yellow-300 font-bold px-3 py-1 rounded-full text-xs">Mission 3</span>
+            <span id="badge-sec-3" class="bg-amber-800/20 text-amber-900 text-xs font-bold px-2.5 py-1 rounded-full">Not Started</span>
+          </div>
+          <div class="text-4xl mb-3">📖</div>
+          <h3 class="font-fredoka text-xl font-bold text-purple-950 mb-2">3. Grammar & Story Typing</h3>
+          <p class="text-purple-900/80 text-sm mb-4">Type the missing grammar words directly into sentence blanks!</p>
+          <div class="flex items-center justify-between pt-2 border-t border-amber-900/10">
+            <span id="score-sec-3" class="text-xs font-bold text-amber-900">Score: 0 / 10</span>
+            <span class="text-purple-950 group-hover:translate-x-1 transition font-bold text-sm">Start <i class="fas fa-arrow-right"></i></span>
+          </div>
+        </div>
+
+        <!-- Mission 4 -->
+        <div onclick="openSection(4)" class="gold-card rounded-2xl p-6 cursor-pointer transform hover:-translate-y-2 transition duration-300 relative overflow-hidden group">
+          <div class="flex justify-between items-start mb-3">
+            <span class="bg-purple-900 text-yellow-300 font-bold px-3 py-1 rounded-full text-xs">Mission 4</span>
+            <span id="badge-sec-4" class="bg-amber-800/20 text-amber-900 text-xs font-bold px-2.5 py-1 rounded-full">Not Started</span>
+          </div>
+          <div class="text-4xl mb-3">💬</div>
+          <h3 class="font-fredoka text-xl font-bold text-purple-950 mb-2">4. 6-Step Story Order & Vocab</h3>
+          <p class="text-purple-900/80 text-sm mb-4">Reorder 6 key story steps from start to finish and select vocabulary!</p>
+          <div class="flex items-center justify-between pt-2 border-t border-amber-900/10">
+            <span id="score-sec-4" class="text-xs font-bold text-amber-900">Score: 0 / 10</span>
+            <span class="text-purple-950 group-hover:translate-x-1 transition font-bold text-sm">Start <i class="fas fa-arrow-right"></i></span>
+          </div>
+        </div>
+
+        <!-- Mission 5 -->
+        <div onclick="openSection(5)" class="gold-card rounded-2xl p-6 cursor-pointer transform hover:-translate-y-2 transition duration-300 relative overflow-hidden group">
+          <div class="flex justify-between items-start mb-3">
+            <span class="bg-purple-900 text-yellow-300 font-bold px-3 py-1 rounded-full text-xs">Mission 5</span>
+            <span id="badge-sec-5" class="bg-amber-800/20 text-amber-900 text-xs font-bold px-2.5 py-1 rounded-full">Not Started</span>
+          </div>
+          <div class="text-4xl mb-3">✍️</div>
+          <h3 class="font-fredoka text-xl font-bold text-purple-950 mb-2">5. Favorite Character Writing</h3>
+          <p class="text-purple-900/80 text-sm mb-4">Write about your favorite character with instant feedback & guidance!</p>
+          <div class="flex items-center justify-between pt-2 border-t border-amber-900/10">
+            <span id="score-sec-5" class="text-xs font-bold text-amber-900">Score: 0 / 3</span>
+            <span class="text-purple-950 group-hover:translate-x-1 transition font-bold text-sm">Start <i class="fas fa-arrow-right"></i></span>
+          </div>
+        </div>
+
+        <!-- Mission 6 -->
+        <div onclick="openSection(6)" class="gold-card rounded-2xl p-6 cursor-pointer transform hover:-translate-y-2 transition duration-300 relative overflow-hidden group">
+          <div class="flex justify-between items-start mb-3">
+            <span class="bg-purple-900 text-yellow-300 font-bold px-3 py-1 rounded-full text-xs">Mission 6</span>
+            <span id="badge-sec-6" class="bg-amber-800/20 text-amber-900 text-xs font-bold px-2.5 py-1 rounded-full">Not Started</span>
+          </div>
+          <div class="text-4xl mb-3">🎵</div>
+          <h3 class="font-fredoka text-xl font-bold text-purple-950 mb-2">6. Read & Record Song</h3>
+          <p class="text-purple-900/80 text-sm mb-4">Sing or read along to the Wonka song and record your voice clip!</p>
+          <div class="flex items-center justify-between pt-2 border-t border-amber-900/10">
+            <span id="score-sec-6" class="text-xs font-bold text-amber-900">Score: 0 / 1</span>
+            <span class="text-purple-950 group-hover:translate-x-1 transition font-bold text-sm">Start <i class="fas fa-arrow-right"></i></span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- MISSION 1 VIEW -->
+    <section id="section-1-view" class="hidden purple-card rounded-3xl p-6 sm:p-8 space-y-8">
+      <div class="flex items-center justify-between border-b pb-4 border-gray-200">
+        <div>
+          <span class="text-purple-700 font-bold text-sm uppercase tracking-wider">Mission 1</span>
+          <h2 class="font-fredoka text-2xl sm:text-3xl font-bold text-purple-950">Golden Tickets & Verb Tenses</h2>
+        </div>
+        <button onclick="showDashboard()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-2xl"></i></button>
+      </div>
+
+      <!-- Part A: Golden Ticket Badge Selection Style -->
+      <div class="space-y-4">
+        <h3 class="font-fredoka text-xl text-purple-900">Part A: Assign Golden Ticket Finder Badges</h3>
+        <p class="text-sm text-gray-600">Tap a character button to award them their Golden Ticket finder spot!</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="m1-tickets-badge-container">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <!-- Part B: Past Tense Typing Input -->
+      <div class="space-y-4 border-t pt-6 border-gray-200">
+        <h3 class="font-fredoka text-xl text-purple-900">Part B: Type the correct past tense form of each verb</h3>
+        <p class="text-sm text-gray-600">Fill in the text boxes to complete Charlie's Golden Ticket story!</p>
+
+        <div class="bg-amber-50 p-6 rounded-2xl border-2 border-amber-300 leading-loose text-gray-800 text-base sm:text-lg space-y-2">
+          <p>1. Charlie bought a second chocolate bar.</p>
+          <p>2. He <input type="text" id="m1-q5" placeholder="(open)" class="border-2 border-purple-300 rounded px-3 py-1 font-bold text-purple-950 w-32 uppercase focus:ring-2 focus:ring-purple-500 outline-none"> (open) it and <input type="text" id="m1-q6" placeholder="(see)" class="border-2 border-purple-300 rounded px-3 py-1 font-bold text-purple-950 w-32 uppercase focus:ring-2 focus:ring-purple-500 outline-none"> (see) a Golden Ticket!</p>
+          <p>3. Charlie <input type="text" id="m1-q7" placeholder="(run)" class="border-2 border-purple-300 rounded px-3 py-1 font-bold text-purple-950 w-32 uppercase focus:ring-2 focus:ring-purple-500 outline-none"> (run) home.</p>
+          <p>4. "I have the last Golden Ticket!" he <input type="text" id="m1-q8" placeholder="(say)" class="border-2 border-purple-300 rounded px-3 py-1 font-bold text-purple-950 w-32 uppercase focus:ring-2 focus:ring-purple-500 outline-none"> (say).</p>
+          <p>5. Grandpa Joe <input type="text" id="m1-q9" placeholder="(be)" class="border-2 border-purple-300 rounded px-3 py-1 font-bold text-purple-950 w-32 uppercase focus:ring-2 focus:ring-purple-500 outline-none"> (be) very happy.</p>
+        </div>
+        <div id="m1-verbs-feedback" class="hidden space-y-1 text-sm font-bold"></div>
+      </div>
+
+      <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+        <button onclick="showDashboard()" class="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-100">Back</button>
+        <button onclick="checkSection1()" class="bg-purple-700 hover:bg-purple-800 text-white font-bold px-8 py-3 rounded-xl shadow-lg transition">Submit Mission 1 ✨</button>
+      </div>
+    </section>
+
+    <!-- MISSION 2 VIEW -->
+    <section id="section-2-view" class="hidden purple-card rounded-3xl p-6 sm:p-8 space-y-8">
+      <div class="flex items-center justify-between border-b pb-4 border-gray-200">
+        <div>
+          <span class="text-purple-700 font-bold text-sm uppercase tracking-wider">Mission 2</span>
+          <h2 class="font-fredoka text-2xl sm:text-3xl font-bold text-purple-950">Factory Word Search Challenge</h2>
+        </div>
+        <button onclick="showDashboard()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-2xl"></i></button>
+      </div>
+
+      <div class="space-y-4">
+        <h3 class="font-fredoka text-xl text-purple-900">Find the 6 factory words in the grid! 🔍</h3>
+        <p class="text-sm text-gray-600">Click letters to form words: <strong>COIN, FACTORY, GATES, NUT, TRASH, SQUIRREL</strong></p>
+
+        <div class="flex flex-col lg:flex-row gap-8 items-center justify-around">
+          <div id="word-search-grid" class="grid grid-cols-10 gap-1 bg-purple-900 p-3 rounded-2xl border-4 border-amber-400 shadow-xl max-w-sm sm:max-w-md">
+            <!-- Dynamically populated via JS -->
+          </div>
+
+          <div class="bg-purple-50 p-4 rounded-xl border border-purple-200 w-full max-w-xs space-y-2">
+            <h4 class="font-bold text-purple-950 border-b pb-2">Target Words Found:</h4>
+            <ul id="word-search-checklist" class="space-y-2 text-sm">
+              <li data-word="COIN" class="flex items-center gap-2 text-gray-500"><i class="far fa-circle"></i> COIN</li>
+              <li data-word="FACTORY" class="flex items-center gap-2 text-gray-500"><i class="far fa-circle"></i> FACTORY</li>
+              <li data-word="GATES" class="flex items-center gap-2 text-gray-500"><i class="far fa-circle"></i> GATES</li>
+              <li data-word="NUT" class="flex items-center gap-2 text-gray-500"><i class="far fa-circle"></i> NUT</li>
+              <li data-word="TRASH" class="flex items-center gap-2 text-gray-500"><i class="far fa-circle"></i> TRASH</li>
+              <li data-word="SQUIRREL" class="flex items-center gap-2 text-gray-500"><i class="far fa-circle"></i> SQUIRREL</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+        <button onclick="showDashboard()" class="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-100">Back</button>
+        <button onclick="checkSection2()" class="bg-purple-700 hover:bg-purple-800 text-white font-bold px-8 py-3 rounded-xl shadow-lg transition">Submit Mission 2 ✨</button>
+      </div>
+    </section>
+
+    <!-- MISSION 3 VIEW -->
+    <section id="section-3-view" class="hidden purple-card rounded-3xl p-6 sm:p-8 space-y-8">
+      <div class="flex items-center justify-between border-b pb-4 border-gray-200">
+        <div>
+          <span class="text-purple-700 font-bold text-sm uppercase tracking-wider">Mission 3</span>
+          <h2 class="font-fredoka text-2xl sm:text-3xl font-bold text-purple-950">Grammar & Story Word Typing</h2>
+        </div>
+        <button onclick="showDashboard()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-2xl"></i></button>
+      </div>
+
+      <div class="space-y-4">
+        <h3 class="font-fredoka text-xl text-purple-900">Type the correct grammar and story words into the blanks! ✏️</h3>
+        <p class="text-sm text-gray-600">Look at the hint words in brackets and type the correct word into each sentence blank.</p>
+
+        <div class="bg-purple-50 p-6 rounded-2xl border-2 border-purple-200 space-y-5 text-purple-950 text-base sm:text-lg">
+          <div class="border-b border-purple-200 pb-4 space-y-3">
+            <h4 class="font-bold text-purple-900 text-sm uppercase">Section 1: Factory Visit</h4>
+            <p>1. Charlie and Grandpa Joe went <input type="text" id="m3-q1" placeholder="(to/from)" class="border-2 border-purple-300 rounded px-3 py-1 font-bold text-purple-950 w-32 uppercase outline-none focus:ring-2 focus:ring-purple-500 bg-white"> the chocolate factory.</p>
+            <p>2. Violet, Augustus, Mike, and Veruca went with <input type="text" id="m3-q2" placeholder="(their/them)" class="border-2 border-purple-300 rounded px-3 py-1 font-bold text-purple-950 w-32 uppercase outline-none focus:ring-2 focus:ring-purple-500 bg-white"> families.</p>
+            <p>3. Mr. Wonka <input type="text" id="m3-q3" placeholder="(opened/open)" class="border-2 border-purple-300 rounded px-3 py-1 font-bold text-purple-950 w-36 uppercase outline-none focus:ring-2 focus:ring-purple-500 bg-white"> the gates. "Hello!" he said.</p>
+          </div>
+
+          <div class="border-b border-purple-200 pb-4 space-y-3">
+            <h4 class="font-bold text-purple-900 text-sm uppercase">Section 2: Factory Discoveries</h4>
+            <p>4. You <input type="text" id="m3-q4" placeholder="(can / cannot)" class="border-2 border-purple-300 rounded px-3 py-1 font-bold text-purple-950 w-32 uppercase outline-none focus:ring-2 focus:ring-purple-500 bg-white"> eat the chocolate trees and flowers.</p>
+            <p>5. The Oompa-Loompas are <input type="text" id="m3-q5" placeholder="(little / big)" class="border-2 border-purple-300 rounded px-3 py-1 font-bold text-purple-950 w-32 uppercase outline-none focus:ring-2 focus:ring-purple-500 bg-white"> people.</p>
+            <p>6. Augustus drank from the chocolate river and <input type="text" id="m3-q6" placeholder="(fell / jumped)" class="border-2 border-purple-300 rounded px-3 py-1 font-bold text-purple-950 w-32 uppercase outline-none focus:ring-2 focus:ring-purple-500 bg-white"> in.</p>
+          </div>
+
+          <div class="space-y-3">
+            <h4 class="font-bold text-purple-900 text-sm uppercase">Section 3: Room Prepositions</h4>
+            <p>7. Mike Teavee <input type="text" id="m3-q7" placeholder="(loved / hated)" class="border-2 border-purple-300 rounded px-3 py-1 font-bold text-purple-950 w-32 uppercase outline-none focus:ring-2 focus:ring-purple-500 bg-white"> watching TV.</p>
+            <p>8. In the room, there was a <input type="text" id="m3-q8" placeholder="(big / small)" class="border-2 border-purple-300 rounded px-3 py-1 font-bold text-purple-950 w-32 uppercase outline-none focus:ring-2 focus:ring-purple-500 bg-white"> TV camera.</p>
+            <p>9. This camera sends chocolate bars <input type="text" id="m3-q9" placeholder="(into / over)" class="border-2 border-purple-300 rounded px-3 py-1 font-bold text-purple-950 w-32 uppercase outline-none focus:ring-2 focus:ring-purple-500 bg-white"> people's TVs.</p>
+            <p>10. Mike stood <input type="text" id="m3-q10" placeholder="(in front of / behind)" class="border-2 border-purple-300 rounded px-3 py-1 font-bold text-purple-950 w-44 uppercase outline-none focus:ring-2 focus:ring-purple-500 bg-white"> the camera.</p>
+          </div>
+        </div>
+
+        <div id="m3-typing-feedback" class="hidden space-y-1 text-sm font-bold"></div>
+      </div>
+
+      <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+        <button onclick="showDashboard()" class="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-100">Back</button>
+        <button onclick="checkSection3()" class="bg-purple-700 hover:bg-purple-800 text-white font-bold px-8 py-3 rounded-xl shadow-lg transition">Submit Mission 3 ✨</button>
+      </div>
+    </section>
+
+    <!-- MISSION 4 VIEW -->
+    <section id="section-4-view" class="hidden purple-card rounded-3xl p-6 sm:p-8 space-y-8">
+      <div class="flex items-center justify-between border-b pb-4 border-gray-200">
+        <div>
+          <span class="text-purple-700 font-bold text-sm uppercase tracking-wider">Mission 4</span>
+          <h2 class="font-fredoka text-2xl sm:text-3xl font-bold text-purple-950">6-Step Story Order & Vocab Dropdowns</h2>
+        </div>
+        <button onclick="showDashboard()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-2xl"></i></button>
+      </div>
+
+      <!-- Part A: Expanded Draggable 6-Step Story Sentence Order -->
+      <div class="space-y-4">
+        <h3 class="font-fredoka text-xl text-purple-900">Part A: Put the 6 story steps into correct order (1 to 6)!</h3>
+        <p class="text-sm text-gray-600">Use arrow buttons or drag rows up/down to arrange the events chronologically.</p>
+
+        <div id="m4-drag-list" class="space-y-3 my-2">
+          <!-- Rendered via JS -->
+        </div>
+        <div id="m4-drag-feedback" class="hidden text-xs font-bold pt-1"></div>
+      </div>
+
+      <!-- Part B: Dropdown Vocabulary Quiz -->
+      <div class="space-y-4 border-t pt-6 border-gray-200">
+        <h3 class="font-fredoka text-xl text-purple-900">Part B: Select correct vocabulary with Dropdown menus</h3>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="bg-purple-50 p-4 rounded-xl border border-purple-200 space-y-2">
+            <p class="font-bold text-sm">1. Things you don't want or need.</p>
+            <select id="m4-dd-1" class="w-full border-2 border-purple-300 rounded-xl p-2 font-bold text-purple-950 outline-none"><option value="">Select answer...</option><option value="factory">Factory</option><option value="gates">Gates</option><option value="trash">Trash / Garbage</option></select>
+          </div>
+
+          <div class="bg-purple-50 p-4 rounded-xl border border-purple-200 space-y-2">
+            <p class="font-bold text-sm">2. Animals that love eating nuts.</p>
+            <select id="m4-dd-2" class="w-full border-2 border-purple-300 rounded-xl p-2 font-bold text-purple-950 outline-none"><option value="">Select answer...</option><option value="oompa">Oompa-Loompas</option><option value="squirrels">Squirrels</option><option value="children">Children</option></select>
+          </div>
+
+          <div class="bg-purple-50 p-4 rounded-xl border border-purple-200 space-y-2">
+            <p class="font-bold text-sm">3. Yummy treat made in the factory.</p>
+            <select id="m4-dd-3" class="w-full border-2 border-purple-300 rounded-xl p-2 font-bold text-purple-950 outline-none"><option value="">Select answer...</option><option value="chocolate">Chocolate Bar</option><option value="stick">Wooden Stick</option><option value="ticket">Paper Ticket</option></select>
+          </div>
+
+          <div class="bg-purple-50 p-4 rounded-xl border border-purple-200 space-y-2">
+            <p class="font-bold text-sm">4. Child whose father was very rich.</p>
+            <select id="m4-dd-4" class="w-full border-2 border-purple-300 rounded-xl p-2 font-bold text-purple-950 outline-none"><option value="">Select answer...</option><option value="Augustus">Augustus Gloop</option><option value="Veruca">Veruca Salt</option><option value="Violet">Violet Beauregarde</option></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+        <button onclick="showDashboard()" class="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-100">Back</button>
+        <button onclick="checkSection4()" class="bg-purple-700 hover:bg-purple-800 text-white font-bold px-8 py-3 rounded-xl shadow-lg transition">Submit Mission 4 ✨</button>
+      </div>
+    </section>
+
+    <!-- MISSION 5 VIEW -->
+    <section id="section-5-view" class="hidden purple-card rounded-3xl p-6 sm:p-8 space-y-8">
+      <div class="flex items-center justify-between border-b pb-4 border-gray-200">
+        <div>
+          <span class="text-purple-700 font-bold text-sm uppercase tracking-wider">Mission 5</span>
+          <h2 class="font-fredoka text-2xl sm:text-3xl font-bold text-purple-950">My Favorite Character Writing</h2>
+        </div>
+        <button onclick="showDashboard()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-2xl"></i></button>
+      </div>
+
+      <div class="space-y-4">
+        <h3 class="font-fredoka text-xl text-purple-900">Write about your favorite character! ✍️</h3>
+        <p class="text-sm text-gray-600">Who is your favorite character in Charlie and the Chocolate Factory? Why do you like them?</p>
+
+        <textarea id="m5-essay-input" rows="5" placeholder="My favorite character is Charlie because..." class="w-full p-4 border-2 border-purple-300 rounded-2xl focus:ring-2 focus:ring-purple-600 font-semibold text-purple-950 outline-none text-base"></textarea>
+
+        <!-- Instant Encouraging & Red Feedback Box -->
+        <div id="m5-feedback-container" class="hidden space-y-3 pt-2">
+          <!-- Green Praise Box -->
+          <div id="m5-praise-box" class="bg-green-100 border-2 border-green-500 p-4 rounded-2xl text-green-900 font-bold space-y-1">
+            <p class="text-lg">🎉 Great Effort!</p>
+            <p id="m5-praise-text" class="text-sm font-semibold"></p>
+          </div>
+
+          <!-- Red Corrections Box -->
+          <div id="m5-correction-box" class="bg-red-100 border-2 border-red-500 p-4 rounded-2xl text-red-900 space-y-1">
+            <p class="font-bold text-base">💡 Tips for Improvement:</p>
+            <ul id="m5-correction-list" class="list-disc pl-5 text-sm space-y-1"></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+        <button onclick="showDashboard()" class="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-100">Back</button>
+        <button onclick="checkSection5()" class="bg-purple-700 hover:bg-purple-800 text-white font-bold px-8 py-3 rounded-xl shadow-lg transition">Submit Writing ✨</button>
+      </div>
+    </section>
+
+    <!-- MISSION 6 VIEW -->
+    <section id="section-6-view" class="hidden purple-card rounded-3xl p-6 sm:p-8 space-y-8">
+      <div class="flex items-center justify-between border-b pb-4 border-gray-200">
+        <div>
+          <span class="text-purple-700 font-bold text-sm uppercase tracking-wider">Mission 6</span>
+          <h2 class="font-fredoka text-2xl sm:text-3xl font-bold text-purple-950">Song Corner & Audio Recording Station</h2>
+        </div>
+        <button onclick="showDashboard()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-2xl"></i></button>
+      </div>
+
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="font-fredoka text-xl text-purple-900">Read or sing the Wonka Song aloud! 🎵</h3>
+          <button onclick="speakSong()" class="bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow">
+            <i class="fas fa-volume-up"></i> Listen Read Aloud
+          </button>
+        </div>
+
+        <div class="bg-amber-50 p-6 rounded-2xl border-2 border-amber-300 text-purple-950 font-medium space-y-4 leading-relaxed text-center shadow-inner text-base">
+          <p class="italic text-gray-700">
+            Charlie and his family<br>
+            Didn't have lots of money,<br>
+            But he found a Golden Ticket,<br>
+            And he went to the chocolate factory!
+          </p>
+          <p class="font-bold text-purple-900 text-lg">
+            Charlie, Charlie, what did you see<br>
+            In Mr. Wonka's factory?<br>
+            Charlie, Charlie, what did you do<br>
+            When Mr. Wonka gave the factory to you?
+          </p>
+          <p class="italic text-gray-700">
+            The other children were naughty—<br>
+            Violet, Augustus, Veruca, and Mike.<br>
+            Mr. Wonka did not like them.<br>
+            Charlie was the one he liked!
+          </p>
+        </div>
+
+        <!-- Audio Recorder Module -->
+        <div class="bg-purple-50 p-6 rounded-2xl border-2 border-purple-200 text-center space-y-4">
+          <h4 class="font-bold text-purple-950 text-base">🎙️ Voice Recording Studio</h4>
+          <p class="text-xs text-gray-600">Press 'Start Recording', read or sing the text above, then press 'Stop' to listen back!</p>
+
+          <div class="flex items-center justify-center gap-4">
+            <button id="record-btn" onclick="toggleRecording()" class="bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-xl shadow flex items-center gap-2">
+              <i class="fas fa-microphone"></i> Start Recording
+            </button>
+            <button id="stop-btn" onclick="stopRecording()" disabled class="bg-gray-400 text-white font-bold px-5 py-2.5 rounded-xl shadow flex items-center gap-2 cursor-not-allowed">
+              <i class="fas fa-stop"></i> Stop
+            </button>
+          </div>
+
+          <div id="recording-status" class="text-xs font-bold text-purple-900">Status: Ready to record</div>
+          <audio id="audio-playback" controls class="hidden mx-auto mt-2 w-full max-w-md"></audio>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+        <button onclick="showDashboard()" class="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-100">Back</button>
+        <button onclick="completeSection6()" class="bg-purple-700 hover:bg-purple-800 text-white font-bold px-8 py-3 rounded-xl shadow-lg transition">Complete Mission 6 ✨</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="max-w-6xl mx-auto w-full mt-8 text-center text-xs text-purple-300/60 pb-2">
+    Ladybird Readers Level 3 • Interactive Learning Companion
+  </footer>
+
+  <script>
+    const CHARACTERS = [
+      { id: 'charlie', name: 'Charlie', avatar: '🍫' },
+      { id: 'wonka', name: 'Willy Wonka', avatar: '🎩' },
+      { id: 'veruca', name: 'Veruca', avatar: '👑' },
+      { id: 'violet', name: 'Violet', avatar: '🍬' },
+      { id: 'augustus', name: 'Augustus', avatar: '🍩' },
+      { id: 'mike', name: 'Mike', avatar: '📺' }
+    ];
+
+    const defaultLeaders = [
+      { name: "Emma S.", class: "3B", score: 40, avatar: "🎩" },
+      { name: "Lucas K.", class: "3A", score: 37, avatar: "🍫" },
+      { name: "Sophia L.", class: "3C", score: 35, avatar: "👑" }
+    ];
+
+    const state = {
+      user: { name: '', class: '', num: '', character: CHARACTERS[0] },
+      userAnswers: {},
+      ticketBadgeSelections: {},
+      sectionScores: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
+      maxScores: { 1: 9, 2: 6, 3: 10, 4: 10, 5: 3, 6: 1 },
+      wordSearchGrid: [
+        ['H','I','G','B','F','E','C','W','F','X'],
+        ['A','D','S','M','A','A','L','L','E','E'],
+        ['T','Y','I','R','C','O','I','N','Y','E'],
+        ['R','I','N','O','T','S','A','U','R','T'],
+        ['A','Z','J','A','O','G','A','T','ES'],
+        ['S','Q','U','I','R','R','E','L','A','Y'],
+        ['H','I','B','Q','Y','B','P','T','V','O'],
+        ['A','O','W','S','D','Q','A','F','M','Q'],
+        ['M','A','X','R','T','P','L','A','Y','P'],
+        ['B','P','G','B','E','C','W','F','T','C']
+      ],
+      foundWords: new Set(),
+      selectedCells: [],
+      draggableSentences: [
+        { id: 's1', text: 'Charlie bought a chocolate bar and found the fifth Golden Ticket.', order: 1 },
+        { id: 's2', text: 'Charlie and four other children entered Willy Wonka\'s factory.', order: 2 },
+        { id: 's3', text: 'Augustus Gloop drank from the chocolate river and got sucked up a pipe.', order: 3 },
+        { id: 's4', text: 'Violet Beauregarde tried experimental gum and turned into a giant blueberry.', order: 4 },
+        { id: 's5', text: 'Mike Teavee jumped in front of the TV camera and became tiny.', order: 5 },
+        { id: 's6', text: 'Charlie was the only well-behaved child left, so Mr. Wonka gave him the factory!', order: 6 }
+      ]
+    };
+
+    let mediaRecorder = null;
+    let audioChunks = [];
+
+    window.onload = function() {
+      renderCharacterOptions();
+      renderLeaderboard();
+      renderAllQuestions();
+      renderTicketBadges();
+      renderCombinedDraggableList();
+    };
+
+    function renderCharacterOptions() {
+      const selector = document.getElementById('character-selector');
+      if (!selector) return;
+      selector.innerHTML = '';
+
+      CHARACTERS.forEach((c, idx) => {
+        const isSelected = idx === 0;
+        const box = document.createElement('div');
+        box.className = isSelected 
+          ? 'p-2 rounded-xl border-2 cursor-pointer text-center flex flex-col items-center justify-center transition border-purple-600 bg-purple-100'
+          : 'p-2 rounded-xl border-2 cursor-pointer text-center flex flex-col items-center justify-center transition border-gray-200 hover:border-purple-300';
+        
+        box.onclick = () => selectCharacter(c, box);
+        box.innerHTML = `
+          <div class="text-2xl">${c.avatar}</div>
+          <div class="text-[10px] font-bold text-purple-950 mt-1">${c.name}</div>
+        `;
+        selector.appendChild(box);
+      });
+    }
+
+    function selectCharacter(charObj, element) {
+      state.user.character = charObj;
+      document.querySelectorAll('#character-selector > div').forEach(el => {
+        el.className = 'p-2 rounded-xl border-2 cursor-pointer text-center flex flex-col items-center justify-center transition border-gray-200 hover:border-purple-300';
+      });
+      element.className = 'p-2 rounded-xl border-2 cursor-pointer text-center flex flex-col items-center justify-center transition border-purple-600 bg-purple-100';
+    }
+
+    function submitRegistration(e) {
+      e.preventDefault();
+      state.user.name = document.getElementById('reg-name').value.trim();
+      state.user.class = document.getElementById('reg-class').value.trim();
+      state.user.num = document.getElementById('reg-num').value.trim();
+
+      document.getElementById('user-display-name').innerText = `${state.user.name} (#${state.user.num})`;
+      document.getElementById('user-display-class').innerText = `Class ${state.user.class}`;
+      document.getElementById('user-avatar-badge').innerText = state.user.character.avatar;
+
+      document.getElementById('registration-modal').classList.add('hidden');
+      updateLeaderboard();
+      showDashboard();
+    }
+
+    function renderTicketBadges() {
+      const container = document.getElementById('m1-tickets-badge-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const ticketItems = [
+        { id: 't1', title: '1st Golden Ticket', correct: 'Augustus' },
+        { id: 't2', title: '2nd Golden Ticket', correct: 'Veruca' },
+        { id: 't3', title: '3rd Golden Ticket', correct: 'Violet' },
+        { id: 't4', title: '4th Golden Ticket', correct: 'Mike' }
+      ];
+
+      const charactersList = ['Augustus', 'Veruca', 'Violet', 'Mike'];
+
+      ticketItems.forEach(t => {
+        const card = document.createElement('div');
+        card.className = "bg-purple-50 p-4 rounded-2xl border-2 border-purple-200 space-y-3";
+        
+        let btnsHTML = '<div class="grid grid-cols-2 gap-2">';
+        charactersList.forEach(c => {
+          btnsHTML += `
+            <button type="button" onclick="selectTicketBadge('${t.id}', '${c}', this)" data-ticket="${t.id}" data-char="${c}" class="badge-btn bg-white border-2 border-purple-200 py-2 px-3 rounded-xl font-bold text-xs text-purple-950 hover:border-purple-400 transition">
+              ${c}
+            </button>
+          `;
+        });
+        btnsHTML += '</div>';
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-purple-950 text-sm">🎟️ ${t.title}</span>
+            <span id="badge-selected-${t.id}" class="text-xs bg-purple-200 text-purple-900 px-2.5 py-1 rounded-full font-bold">Unassigned</span>
+          </div>
+          ${btnsHTML}
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function selectTicketBadge(ticketId, charName, btn) {
+      state.ticketBadgeSelections[ticketId] = charName;
+      document.querySelectorAll(`[data-ticket="${ticketId}"]`).forEach(b => {
+        b.className = 'badge-btn bg-white border-2 border-purple-200 py-2 px-3 rounded-xl font-bold text-xs text-purple-950 hover:border-purple-400 transition';
+      });
+      btn.className = 'badge-btn bg-purple-700 text-white border-2 border-purple-900 py-2 px-3 rounded-xl font-bold text-xs shadow-md transition';
+      document.getElementById(`badge-selected-${ticketId}`).innerText = charName;
+      document.getElementById(`badge-selected-${ticketId}`).className = "text-xs bg-amber-400 text-amber-950 px-2.5 py-1 rounded-full font-extrabold";
+    }
+
+    const QUESTIONS_DATA = {
+      m1_names: [
+        { id: 'm1-q1', prompt: '1. Augustus', label: 'First Ticket Finder', correct: 'Gloop', options: ['Gloop', 'Salt', 'Beauregarde', 'Teavee'] },
+        { id: 'm1-q2', prompt: '2. Veruca', label: 'Spoiled Girl', correct: 'Salt', options: ['Teavee', 'Gloop', 'Salt', 'Beauregarde'] },
+        { id: 'm1-q3', prompt: '3. Violet', label: 'Gum Chewer', correct: 'Beauregarde', options: ['Salt', 'Beauregarde', 'Gloop', 'Teavee'] },
+        { id: 'm1-q4', prompt: '4. Mike', label: 'TV Fan', correct: 'Teavee', options: ['Beauregarde', 'Teavee', 'Gloop', 'Salt'] }
+      ]
+    };
+
+    function renderAllQuestions() {
+      render4OptionGrid('m1-names-container', QUESTIONS_DATA.m1_names);
+    }
+
+    function render4OptionGrid(containerId, dataList) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = '';
+
+      dataList.forEach(q => {
+        const card = document.createElement('div');
+        card.className = "bg-purple-50 p-4 rounded-2xl border border-purple-200 flex flex-col justify-between space-y-3";
+        
+        let headerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-purple-900">${q.prompt}</span>
+            <span class="text-[10px] bg-purple-200 text-purple-800 px-2 py-0.5 rounded font-bold">${q.label}</span>
+          </div>
+        `;
+
+        let optionsHTML = '<div class="grid grid-cols-2 gap-2 mt-2">';
+        q.options.forEach(opt => {
+          optionsHTML += `
+            <button type="button" onclick="selectAnswer('${q.id}', '${opt}', this)" data-qid="${q.id}" data-val="${opt}" class="opt-btn bg-white border-2 border-purple-200 p-2.5 rounded-xl font-semibold text-xs sm:text-sm text-purple-950 hover:border-purple-400 text-center shadow-sm">
+              ${opt}
+            </button>
+          `;
+        });
+        optionsHTML += '</div>';
+
+        card.innerHTML = `
+          <div>${headerHTML}</div>
+          ${optionsHTML}
+          <div id="fb-${q.id}" class="hidden text-xs font-bold pt-1"></div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function selectAnswer(qid, value, btnElement) {
+      state.userAnswers[qid] = value;
+      document.querySelectorAll(`[data-qid="${qid}"]`).forEach(btn => {
+        btn.classList.remove('selected-option');
+      });
+      btnElement.classList.add('selected-option');
+    }
+
+    function renderCombinedDraggableList() {
+      const container = document.getElementById('m4-drag-list');
+      if (!container) return;
+      container.innerHTML = '';
+
+      state.draggableSentences.forEach((item, idx) => {
+        const row = document.createElement('div');
+        row.className = 'drag-item bg-purple-50 p-4 rounded-2xl border-2 border-purple-300 flex items-center justify-between gap-3 shadow-sm';
+        row.setAttribute('draggable', 'true');
+        row.dataset.index = idx;
+
+        row.innerHTML = `
+          <div class="flex items-center gap-3">
+            <span class="bg-purple-900 text-yellow-300 font-bold px-3 py-1 rounded-lg text-xs">Line ${idx + 1}</span>
+            <span class="font-bold text-purple-950 text-sm sm:text-base">${item.text}</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <button type="button" onclick="moveSentence(${idx}, -1)" class="p-2 bg-purple-200 hover:bg-purple-300 text-purple-900 rounded-lg"><i class="fas fa-arrow-up"></i></button>
+            <button type="button" onclick="moveSentence(${idx}, 1)" class="p-2 bg-purple-200 hover:bg-purple-300 text-purple-900 rounded-lg"><i class="fas fa-arrow-down"></i></button>
+          </div>
+        `;
+
+        row.addEventListener('dragstart', handleDragStart);
+        row.addEventListener('dragover', handleDragOver);
+        row.addEventListener('drop', handleDrop);
+        row.addEventListener('dragend', handleDragEnd);
+
+        container.appendChild(row);
+      });
+    }
+
+    let dragSrcIndex = null;
+
+    function handleDragStart(e) {
+      dragSrcIndex = Number(this.dataset.index);
+      this.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      const dropIndex = Number(this.dataset.index);
+      if (dragSrcIndex !== null && dragSrcIndex !== dropIndex) {
+        const movedItem = state.draggableSentences.splice(dragSrcIndex, 1)[0];
+        state.draggableSentences.splice(dropIndex, 0, movedItem);
+        renderCombinedDraggableList();
+      }
+    }
+
+    function handleDragEnd() {
+      this.classList.remove('dragging');
+    }
+
+    function moveSentence(index, direction) {
+      const target = index + direction;
+      if (target >= 0 && target < state.draggableSentences.length) {
+        const item = state.draggableSentences.splice(index, 1)[0];
+        state.draggableSentences.splice(target, 0, item);
+        renderCombinedDraggableList();
+      }
+    }
+
+    function renderLeaderboard() {
+      let leaders = JSON.parse(localStorage.getItem('wonka_top3_scores')) || defaultLeaders;
+      const container = document.getElementById('top-3-container');
+      container.innerHTML = '';
+
+      leaders.slice(0, 3).forEach((player, i) => {
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
+        const badge = document.createElement('div');
+        badge.className = "bg-purple-950/80 px-3 py-1.5 rounded-xl border border-amber-400/40 flex items-center gap-2";
+        badge.innerHTML = `
+          <span>${medal}</span>
+          <span>${player.avatar} ${player.name} (${player.class})</span>
+          <span class="text-yellow-300 font-extrabold">${player.score} pts</span>
+        `;
+        container.appendChild(badge);
+      });
+    }
+
+    function updateLeaderboard() {
+      let total = getTotalScore();
+      let leaders = JSON.parse(localStorage.getItem('wonka_top3_scores')) || [...defaultLeaders];
+      
+      const existingIdx = leaders.findIndex(l => l.name === state.user.name && l.class === state.user.class);
+      if (existingIdx > -1) {
+        leaders[existingIdx].score = Math.max(leaders[existingIdx].score, total);
+      } else if (state.user.name) {
+        leaders.push({
+          name: state.user.name,
+          class: state.user.class,
+          score: total,
+          avatar: state.user.character.avatar
+        });
+      }
+
+      leaders.sort((a, b) => b.score - a.score);
+      localStorage.setItem('wonka_top3_scores', JSON.stringify(leaders));
+      renderLeaderboard();
+    }
+
+    function showDashboard() {
+      document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
+      document.getElementById('dashboard-view').classList.remove('hidden');
+      updateTotalDisplay();
+    }
+
+    function openSection(num) {
+      document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
+      document.getElementById(`section-${num}-view`).classList.remove('hidden');
+      if (num === 2) renderWordSearch();
+    }
+
+    function renderWordSearch() {
+      const gridContainer = document.getElementById('word-search-grid');
+      gridContainer.innerHTML = '';
+      
+      state.wordSearchGrid.forEach((row, rIdx) => {
+        row.forEach((char, cIdx) => {
+          const cell = document.createElement('div');
+          cell.className = 'word-grid-cell w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center font-bold text-white rounded bg-purple-800/60 hover:bg-purple-600 cursor-pointer text-sm sm:text-base';
+          cell.innerText = char;
+          cell.dataset.row = rIdx;
+          cell.dataset.col = cIdx;
+          cell.onclick = () => handleCellClick(cell, rIdx, cIdx);
+          gridContainer.appendChild(cell);
+        });
+      });
+    }
+
+    function handleCellClick(cell, r, c) {
+      cell.classList.toggle('selected');
+      const idx = state.selectedCells.findIndex(item => item.r === r && item.c === c);
+      if (idx > -1) {
+        state.selectedCells.splice(idx, 1);
+      } else {
+        state.selectedCells.push({ r, c, char: cell.innerText });
+      }
+
+      const str = state.selectedCells.map(i => i.char).join('');
+      const revStr = str.split('').reverse().join('');
+      const targets = ['COIN', 'FACTORY', 'GATES', 'NUT', 'TRASH', 'SQUIRREL'];
+
+      targets.forEach(word => {
+        if ((str === word || revStr === word) && !state.foundWords.has(word)) {
+          state.foundWords.add(word);
+          state.selectedCells.forEach(item => {
+            const el = document.querySelector(`[data-row="${item.r}"][data-col="${item.c}"]`);
+            if (el) {
+              el.classList.remove('selected');
+              el.classList.add('found');
+            }
+          });
+          state.selectedCells = [];
+          const item = document.querySelector(`#word-search-checklist li[data-word="${word}"]`);
+          if (item) {
+            item.className = 'flex items-center gap-2 text-green-600 font-bold';
+            item.innerHTML = `<i class="fas fa-check-circle"></i> ${word}`;
+          }
+        }
+      });
+    }
+
+    function evaluateSection(questionsList) {
+      let total = 0;
+      questionsList.forEach(q => {
+        const userVal = state.userAnswers[q.id];
+        const fb = document.getElementById(`fb-${q.id}`);
+
+        document.querySelectorAll(`[data-qid="${q.id}"]`).forEach(btn => {
+          const btnVal = btn.getAttribute('data-val');
+          if (btnVal === q.correct) {
+            btn.classList.add('correct-option');
+          } else if (btnVal === userVal && userVal !== q.correct) {
+            btn.classList.add('wrong-option');
+          }
+        });
+
+        if (fb) {
+          fb.classList.remove('hidden');
+          if (userVal === q.correct) {
+            total++;
+            fb.className = 'text-xs font-bold text-green-600';
+            fb.innerText = '✓ Correct!';
+          } else {
+            fb.className = 'text-xs font-bold text-red-500';
+            fb.innerText = `✗ Correct Answer: ${q.correct}`;
+          }
+        }
+      });
+      return total;
+    }
+
+    function checkSection1() {
+      const badgeAnswers = { 't1': 'Augustus', 't2': 'Veruca', 't3': 'Violet', 't4': 'Mike' };
+      let partA = 0;
+      Object.keys(badgeAnswers).forEach(tId => {
+        if (state.ticketBadgeSelections[tId] === badgeAnswers[tId]) {
+          partA++;
+        }
+      });
+
+      const verbKey = { 'm1-q5': 'OPENED', 'm1-q6': 'SAW', 'm1-q7': 'RAN', 'm1-q8': 'SAID', 'm1-q9': 'WAS' };
+      let partB = 0;
+      const fb = document.getElementById('m1-verbs-feedback');
+      fb.classList.remove('hidden');
+      fb.innerHTML = '';
+
+      Object.keys(verbKey).forEach(id => {
+        const val = document.getElementById(id).value.trim().toUpperCase();
+        if (val === verbKey[id]) {
+          partB++;
+        } else {
+          fb.innerHTML += `<p class="text-red-500">✗ Gap ${id.replace('m1-q','')}: Correct past tense is ${verbKey[id]}</p>`;
+        }
+      });
+
+      if (partB === 5) {
+        fb.innerHTML = '<p class="text-green-600">✓ All past tense verbs typed correctly!</p>';
+      }
+
+      saveMissionScore(1, partA + partB, 9);
+    }
+
+    function checkSection2() {
+      let partA = state.foundWords.size;
+      saveMissionScore(2, partA, 6);
+    }
+
+    function checkSection3() {
+      const typingKey = {
+        'm3-q1': 'TO',
+        'm3-q2': 'THEIR',
+        'm3-q3': 'OPENED',
+        'm3-q4': 'CAN',
+        'm3-q5': 'LITTLE',
+        'm3-q6': 'FELL',
+        'm3-q7': 'LOVED',
+        'm3-q8': 'BIG',
+        'm3-q9': 'INTO',
+        'm3-q10': 'IN FRONT OF'
+      };
+
+      let typingScore = 0;
+      const fb = document.getElementById('m3-typing-feedback');
+      fb.classList.remove('hidden');
+      fb.innerHTML = '';
+
+      Object.keys(typingKey).forEach(id => {
+        const inputEl = document.getElementById(id);
+        const val = inputEl.value.trim().toUpperCase();
+        if (val === typingKey[id]) {
+          typingScore++;
+          inputEl.className = "border-2 border-green-500 bg-green-100 rounded px-3 py-1 font-bold text-green-950 w-36 uppercase outline-none";
+        } else {
+          inputEl.className = "border-2 border-red-500 bg-red-100 rounded px-3 py-1 font-bold text-red-950 w-36 uppercase outline-none";
+          fb.innerHTML += `<p class="text-red-500">✗ Blank ${id.replace('m3-q','')}: Correct word is "${typingKey[id]}"</p>`;
+        }
+      });
+
+      if (typingScore === 10) {
+        fb.innerHTML = '<p class="text-green-600 text-base">🎉 Amazing! All 10 grammar blanks typed correctly!</p>';
+      }
+
+      saveMissionScore(3, typingScore, 10);
+    }
+
+    function checkSection4() {
+      let dragScore = 0;
+      state.draggableSentences.forEach((item, idx) => {
+        if (item.order === (idx + 1)) {
+          dragScore++;
+        }
+      });
+
+      const fbA = document.getElementById('m4-drag-feedback');
+      fbA.classList.remove('hidden');
+      fbA.className = dragScore === 6 ? 'text-xs font-bold text-green-600' : 'text-xs font-bold text-red-500';
+      fbA.innerText = dragScore === 6 ? '✓ All 6 story steps placed in exact chronological order!' : `✗ ${dragScore}/6 sentences in correct order.`;
+
+      const ddKey = { 'm4-dd-1': 'trash', 'm4-dd-2': 'squirrels', 'm4-dd-3': 'chocolate', 'm4-dd-4': 'Veruca' };
+      let vocabScore = 0;
+      Object.keys(ddKey).forEach(id => {
+        if (document.getElementById(id).value === ddKey[id]) vocabScore++;
+      });
+
+      saveMissionScore(4, dragScore + vocabScore, 10);
+    }
+
+    function checkSection5() {
+      const text = document.getElementById('m5-essay-input').value.trim();
+      const container = document.getElementById('m5-feedback-container');
+      const praiseText = document.getElementById('m5-praise-text');
+      const correctionList = document.getElementById('m5-correction-list');
+
+      if (text.length < 10) {
+        alert("Please write at least 2 sentences about your favorite character!");
+        return;
+      }
+
+      container.classList.remove('hidden');
+      correctionList.innerHTML = '';
+
+      let score = 3;
+      let improvements = [];
+
+      if (text[0] !== text[0].toUpperCase()) {
+        improvements.push("Remember to start your sentence with a CAPITAL letter.");
+        score -= 0.5;
+      }
+
+      if (!['.', '!', '?'].includes(text[text.length - 1])) {
+        improvements.push("Add a full stop (.) or exclamation mark (!) at the end of your writing.");
+        score -= 0.5;
+      }
+
+      const names = ['Charlie', 'Wonka', 'Veruca', 'Violet', 'Augustus', 'Mike'];
+      let mentioned = false;
+      names.forEach(n => {
+        if (text.toLowerCase().includes(n.toLowerCase())) {
+          mentioned = true;
+          if (!text.includes(n)) {
+            improvements.push(`Make sure character names like "${n}" are capitalized correctly.`);
+            score -= 0.5;
+          }
+        }
+      });
+
+      if (!mentioned) {
+        improvements.push("Try mentioning a character name explicitly (e.g., Charlie, Willy Wonka, Veruca, Violet, Augustus, Mike).");
+        score -= 0.5;
+      }
+
+      praiseText.innerText = `Awesome story response! You wrote ${text.split(' ').length} words. Great work expressing your thoughts about Charlie's world!`;
+
+      if (improvements.length === 0) {
+        document.getElementById('m5-correction-box').className = "hidden";
+      } else {
+        document.getElementById('m5-correction-box').className = "bg-red-100 border-2 border-red-500 p-4 rounded-2xl text-red-900 space-y-1";
+        improvements.forEach(imp => {
+          correctionList.innerHTML += `<li>${imp}</li>`;
+        });
+      }
+
+      score = Math.max(1, Math.round(score));
+      saveMissionScore(5, score, 3);
+    }
+
+    async function toggleRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        
+        mediaRecorder.ondataavailable = event => {
+          audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const recordedBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+          const audioUrl = URL.createObjectURL(recordedBlob);
+          const playback = document.getElementById('audio-playback');
+          playback.src = audioUrl;
+          playback.classList.remove('hidden');
+          document.getElementById('recording-status').innerText = "Status: Recording Ready for Playback!";
+        };
+
+        mediaRecorder.start();
+        document.getElementById('record-btn').disabled = true;
+        document.getElementById('record-btn').classList.add('opacity-50');
+        document.getElementById('stop-btn').disabled = false;
+        document.getElementById('stop-btn').classList.remove('bg-gray-400', 'cursor-not-allowed');
+        document.getElementById('stop-btn').classList.add('bg-purple-700', 'hover:bg-purple-800');
+        document.getElementById('recording-status').innerText = "Status: Recording Audio... Speak/Sing now!";
+      } catch (err) {
+        alert("Microphone access is required to record audio.");
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        document.getElementById('record-btn').disabled = false;
+        document.getElementById('record-btn').classList.remove('opacity-50');
+        document.getElementById('stop-btn').disabled = true;
+        document.getElementById('stop-btn').classList.add('bg-gray-400', 'cursor-not-allowed');
+      }
+    }
+
+    function completeSection6() {
+      saveMissionScore(6, 1, 1);
+    }
+
+    function saveMissionScore(secNum, score, max) {
+      state.sectionScores[secNum] = score;
+
+      if (score >= max * 0.7) {
+        confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+      }
+
+      const badge = document.getElementById(`badge-sec-${secNum}`);
+      const scoreDisp = document.getElementById(`score-sec-${secNum}`);
+
+      if (badge) {
+        badge.className = "bg-green-600 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1";
+        badge.innerHTML = `<i class="fas fa-check"></i> Completed`;
+      }
+      if (scoreDisp) {
+        scoreDisp.innerText = `Score: ${score} / ${max}`;
+      }
+
+      updateTotalDisplay();
+      updateLeaderboard();
+      showDashboard();
+    }
+
+    function getTotalScore() {
+      return Object.values(state.sectionScores).reduce((a, b) => a + b, 0);
+    }
+
+    function updateTotalDisplay() {
+      const sum = getTotalScore();
+      const totalMax = Object.values(state.maxScores).reduce((a, b) => a + b, 0);
+      document.getElementById('total-score-display').innerText = `${sum} / ${totalMax}`;
+
+      const percent = Math.min(100, Math.round((sum / totalMax) * 100));
+      document.getElementById('overall-progress-bar').style.width = `${percent}%`;
+    }
+
+    function speakSong() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const songText = `Charlie and his family didn't have lots of money, but he found a Golden Ticket, and he went to the chocolate factory! Charlie, Charlie, what did you see in Mr. Wonka's factory? Charlie, Charlie, what did you do when Mr. Wonka gave the factory to you? The other children were naughty - Violet, Augustus, Veruca, and Mike. Mr. Wonka did not like them. Charlie was the one he liked!`;
+        const utterance = new SpeechSynthesisUtterance(songText);
+        utterance.rate = 0.9;
+        utterance.pitch = 1.1;
+        window.speechSynthesis.speak(utterance);
+      } else {
+        alert("Speech synthesis is not supported on this browser.");
+      }
+    }
+  </script>
+</body>
+</html>
